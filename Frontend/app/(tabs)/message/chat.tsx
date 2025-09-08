@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import EmojiSelector from "react-native-emoji-selector";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { fetchConversations, sendMessageToCustomer } from "@/lib/messages";
+import Header from "@/components/Header"; 
 
 type Message = {
   id: number;
@@ -91,16 +92,14 @@ export default function ChatScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color="#000" />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Ionicons name="person-circle-outline" size={32} color="#000" />
-          <Text style={styles.headerText}>{name}</Text>
-        </View>
-        <Ionicons name="ellipsis-horizontal" size={22} color="#000" />
-      </View>
+    <Header
+      title={name as string} // show the chat partner's name
+      rightActions={
+        <>
+          <Ionicons name="ellipsis-horizontal" size={22} color="#fff" />
+        </>
+      }
+    />
 
       {/* Chat messages */}
       <ScrollView style={styles.chatContainer} contentContainerStyle={{ padding: 12 }}>

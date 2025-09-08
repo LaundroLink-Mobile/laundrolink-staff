@@ -5,6 +5,7 @@ import { LineChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
+import Header from "@/components/Header"; 
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -31,12 +32,7 @@ export default function OrderScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerText}>ORDERS</Text>
-      </View>
+        <Header title="Orders" backgroundColor="#00aaff" />
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Date Section */}
@@ -72,12 +68,21 @@ export default function OrderScreen() {
         </View>
 
         {/* Status Cards */}
-        <View style={styles.statusRow}>
-          <StatusCard icon="document-text-outline" label="Total" count={159} color="#00aaff" />
-          <StatusCard icon="checkmark-circle-outline" label="Completed" count={148} color="#00aaff" />
-          <StatusCard icon="time-outline" label="Pending" count={11} color="#00aaff" />
-          <StatusCard icon="bar-chart-outline" label="Revenue" count={30067.79} color="#00aaff" />
+        <View style={styles.statusCardRow}>
+        <View style={styles.statusCardWrapper}>
+            <StatusCard icon="document-text-outline" label="Total" count={159} color="#00aaff" />
         </View>
+        <View style={styles.statusCardWrapper}>
+            <StatusCard icon="checkmark-circle-outline" label="Completed" count={148} color="#00aaff" />
+        </View>
+        <View style={styles.statusCardWrapper}>
+            <StatusCard icon="time-outline" label="Pending" count={11} color="#00aaff" />
+        </View>
+        <View style={styles.statusCardWrapper}>
+            <StatusCard icon="bar-chart-outline" label="Revenue" count={30067.79} color="#00aaff" />
+        </View>
+        </View>
+
 
         {/* Revenue Title */}
         <Text style={styles.sectionTitle}>Revenue</Text>
@@ -173,7 +178,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 10,
+    marginBottom: 5,
     zIndex: 10,
   },
   sectionTitle: { fontSize: 16, fontWeight: "600" },
@@ -209,6 +214,19 @@ const styles = StyleSheet.create({
   menuText: { fontSize: 14, color: "#333" },
 
   statusRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
+
+  statusCardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 2, // left & right spacing
+    paddingVertical: 12,
+    marginBottom: 20,
+    },
+
+    statusCardWrapper: {
+    width: "22%", // keep all 4 in one row
+    },
+
   chartBox: {
     backgroundColor: "#fff",
     borderRadius: 10,

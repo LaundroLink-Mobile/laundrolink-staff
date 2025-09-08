@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "700",
     color: "#222",
     textAlign: "center",

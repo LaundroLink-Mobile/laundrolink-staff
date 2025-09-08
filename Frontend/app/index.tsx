@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, ImageBackground } from "react-native";
 import { useRouter } from "expo-router";
 import LabeledInput from "@/components/ui/LabeledInput";
 import Button from "@/components/ui/Button";
-import BubbleBackground from "@/components/ui/BubblesBackground"; // your animated bubbles
 
 export default function Index() {
   const [email, setEmail] = useState("");
@@ -16,11 +15,15 @@ export default function Index() {
   };
 
   return (
-    <BubbleBackground>
+    <ImageBackground
+      source={require("@/assets/images/bubbles-bg.jpg")} // <-- your static image
+      style={styles.background}
+      resizeMode="cover" // or "contain" / "stretch"
+    >
       <View style={styles.container}>
         {/* Title */}
         <Text style={styles.title}>LaundroLink</Text>
-
+    
         {/* Email Input */}
         <LabeledInput
           label="Email Address"
@@ -42,15 +45,21 @@ export default function Index() {
         {/* Login Button */}
         <Button title="Log In" onPress={handleLogin} />
       </View>
-    </BubbleBackground>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
+    backgroundColor: "rgba(255,255,255,0.8)", // optional: overlay for readability
+    borderRadius: 12,
+    margin: 16,
   },
   title: {
     fontSize: 36,

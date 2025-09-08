@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { fetchConversations } from "@/lib/messages";
+import Header from "@/components/Header"; 
 
 // In the future, replace this with your database fetch (e.g., Firebase, Supabase, or SQLite)
 const initialMessages = [
@@ -69,22 +70,16 @@ export default function MessageScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={22} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerText}>MESSAGES</Text>
-        <View style={styles.rightIcons}>
-          <Ionicons
-            name="search-outline"
-            size={22}
-            color="#000"
-            style={styles.iconSpacing}
-          />
-          <Ionicons name="ellipsis-vertical" size={22} color="#000" />
-        </View>
-      </View>
+      <Header
+        title="Messages"
+        rightActions={
+            <>
+            <Ionicons name="search-outline" size={22} color="#fff" style={{ marginRight: 16 }} />
+            <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
+            </>
+        }
+        />
+
 
       {/* Messages List */}
       <ScrollView contentContainerStyle={styles.content}>

@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+} from "react-native";
 import StatusCard from "@/components/ui/StatusCard";
+import Header from "@/components/Header"; // ⬅️ import reusable header
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { fetchOrdersFromDB, Order } from "@/lib/orders";
 
@@ -32,7 +40,12 @@ export default function HomeScreen() {
     loadOrders();
   }, []);
 
-  const updateOrderStatus = (orderId: string, newStatus: string, reason?: string, note?: string) => {
+  const updateOrderStatus = (
+    orderId: string,
+    newStatus: string,
+    reason?: string,
+    note?: string
+  ) => {
     setOrders((prev) =>
       prev.map((o) =>
         o.orderId === orderId ? { ...o, status: newStatus, reason, note } : o
@@ -45,52 +58,57 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerText}>DASHBOARD</Text>
-      </View>
+      <Header title="Dashboard" showBack={false} backgroundColor="#00aaff" />
 
       {/* Status Cards */}
       <View style={styles.statusCardRow}>
-        <View style={styles.statusCardWrapper}>
-          <TouchableOpacity onPress={() => router.push("/home/processing")}>
-            <StatusCard
-              icon="sync-outline"
-              label="Processing"
-              count={orders.filter((o) => o.status === "Processing").length}
-              color="#3498db"
-            />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.statusCardWrapper}>
-          <TouchableOpacity onPress={() => router.push("/home/delivery")}>
-            <StatusCard
-              icon="cube-outline"
-              label="For Delivery"
-              count={orders.filter((o) => o.status === "For Delivery").length}
-              color="#9b59b6"
-            />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.statusCardWrapper}>
-          <TouchableOpacity onPress={() => router.push("/home/completed")}>
-            <StatusCard
-              icon="checkmark-done-outline"
-              label="Completed"
-              count={orders.filter((o) => o.status === "Completed").length}
-              color="#2ecc71"
-            />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.statusCardWrapper}>
-          <TouchableOpacity onPress={() => router.push("/home/rejected")}>
-            <StatusCard
-              icon="ban-outline"
-              label="Rejected"
-              count={orders.filter((o) => o.status === "Rejected").length}
-              color="#e74c3c"
-            />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.statusCardWrapper}
+          onPress={() => router.push("/home/processing")}
+        >
+          <StatusCard
+            icon="sync-outline"
+            label="Processing"
+            count={orders.filter((o) => o.status === "Processing").length}
+            color="#3498db"
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.statusCardWrapper}
+          onPress={() => router.push("/home/delivery")}
+        >
+          <StatusCard
+            icon="cube-outline"
+            label="For Delivery"
+            count={orders.filter((o) => o.status === "For Delivery").length}
+            color="#9b59b6"
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.statusCardWrapper}
+          onPress={() => router.push("/home/completed")}
+        >
+          <StatusCard
+            icon="checkmark-done-outline"
+            label="Completed"
+            count={orders.filter((o) => o.status === "Completed").length}
+            color="#2ecc71"
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.statusCardWrapper}
+          onPress={() => router.push("/home/rejected")}
+        >
+          <StatusCard
+            icon="ban-outline"
+            label="Rejected"
+            count={orders.filter((o) => o.status === "Rejected").length}
+            color="#e74c3c"
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Title outside scroll */}
@@ -99,7 +117,9 @@ export default function HomeScreen() {
       {/* Orders List */}
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadOrders} />}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={loadOrders} />
+        }
       >
         {freshOrders.map((order) => (
           <OrderCard
@@ -110,7 +130,7 @@ export default function HomeScreen() {
         ))}
 
         {freshOrders.length === 0 && (
-          <Text style={{ textAlign: "center", color: "#666", marginTop: 30 }}>
+          <Text style={styles.noOrdersText}>
             🎉 No new orders to review!
           </Text>
         )}
@@ -119,20 +139,33 @@ export default function HomeScreen() {
   );
 }
 
-function OrderCard({ order, onUpdateStatus }: { order: Order; onUpdateStatus: (orderId: string, status: string) => void }) {
+function OrderCard({
+  order,
+  onUpdateStatus,
+}: {
+  order: Order;
+  onUpdateStatus: (orderId: string, status: string) => void;
+}) {
   const router = useRouter();
 
   return (
     <View style={styles.orderCard}>
       <Text style={styles.orderId}>{order.orderId}</Text>
-      <Text style={styles.orderText}>{order.customer} placed a laundry order.</Text>
-      
+      <Text style={styles.orderText}>
+        {order.customer} placed a laundry order.
+      </Text>
+
       <TouchableOpacity
-        onPress={() => router.push({ pathname: "/home/orderdetail", params: { orderId: order.orderId } })}
+        onPress={() =>
+          router.push({
+            pathname: "/home/orderdetail",
+            params: { orderId: order.orderId },
+          })
+        }
       >
         <Text style={styles.viewDetails}>View Details</Text>
       </TouchableOpacity>
-      
+
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={[styles.button, styles.acceptBtn]}
@@ -159,20 +192,25 @@ function OrderCard({ order, onUpdateStatus }: { order: Order; onUpdateStatus: (o
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f6fa" },
   scrollContainer: { padding: 16 },
-  header: { backgroundColor: "#89CFF0", paddingVertical: 16, paddingHorizontal: 20 },
-  headerText: { fontSize: 20, fontWeight: "bold", color: "#000" },
 
   statusCardRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#f5f6fa",
   },
-  statusCardWrapper: { flex: 1, margin: 4 },
+  statusCardWrapper: {
+    width: "22%",
+  },
 
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10, color: "#111", paddingHorizontal: 16 },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 5,
+    marginTop: 8,
+    color: "#111",
+    paddingHorizontal: 16,
+  },
 
   orderCard: {
     backgroundColor: "#fff",
@@ -184,7 +222,13 @@ const styles = StyleSheet.create({
   },
   orderId: { fontSize: 14, fontWeight: "500", marginBottom: 4 },
   orderText: { fontSize: 14, color: "#333", marginBottom: 8 },
-  viewDetails: { fontSize: 13, color: "#3498db", marginBottom: 10, fontWeight: "500"},
+  viewDetails: {
+    fontSize: 13,
+    color: "#3498db",
+    marginBottom: 10,
+    fontWeight: "500",
+  },
+
   buttonRow: { flexDirection: "row", justifyContent: "space-between" },
   button: {
     flex: 1,
@@ -196,4 +240,6 @@ const styles = StyleSheet.create({
   acceptBtn: { backgroundColor: "green" },
   rejectBtn: { backgroundColor: "darkred" },
   buttonText: { color: "#fff", fontWeight: "600" },
+
+  noOrdersText: { textAlign: "center", color: "#666", marginTop: 30 },
 });

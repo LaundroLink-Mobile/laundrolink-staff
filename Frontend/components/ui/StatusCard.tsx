@@ -1,21 +1,46 @@
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import styles from "./StatusCard.styles";
 
-type StatusCardProps = {
+type Props = {
+  icon: keyof typeof Ionicons.glyphMap; // ✅ strong typing
   label: string;
   count: number;
-  icon: keyof typeof Ionicons.glyphMap;
-  color?: string;
+  color: string;
 };
 
-export default function StatusCard({ label, count, icon, color }: StatusCardProps) {
+export default function StatusCard({ icon, label, count, color }: Props) {
   return (
-    <View style={styles.statusCard}>
-      <Ionicons name={icon} size={28} color={color || "#333"} style={{ marginBottom: 6 }} />
-      <Text style={styles.statusCount}>{count}</Text>
-      <Text style={styles.statusLabel}>{label}</Text>
+    <View style={[styles.card, { borderColor: color }]}>
+      <Ionicons name={icon} size={32} color={color} style={styles.icon} />
+      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.count, { color }]}>{count}</Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+  backgroundColor: "#fff",
+  paddingVertical: 10, // reduced padding
+  paddingHorizontal: 6,
+  borderRadius: 10,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 2,
+  minHeight: 110, // smaller height so 4 fit nicely
+},
+icon: {
+  marginBottom: 4,
+},
+label: {
+  fontSize: 11,  // smaller text
+  fontWeight: "600",
+  marginBottom: 2,
+  textAlign: "center",
+},
+count: {
+  fontSize: 14,
+  fontWeight: "bold",
+},
+});

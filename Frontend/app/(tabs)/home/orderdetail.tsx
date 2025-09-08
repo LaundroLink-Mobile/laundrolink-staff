@@ -9,6 +9,7 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { fetchOrdersFromDB, Order } from "@/lib/orders";
+import Header from "@/components/Header"; 
 
 export default function OrderDetailScreen() {
   const router = useRouter();
@@ -45,12 +46,7 @@ export default function OrderDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerText}>Order Details</Text>
-      </View>
+        <Header title="Order Details" backgroundColor="#00aaff" />
 
       {/* Customer Info */}
       <View style={styles.section}>
