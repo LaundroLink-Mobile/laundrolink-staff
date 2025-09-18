@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ImageBackground } from "react-native";
+import { View, Text, StyleSheet, ImageBackground, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import LabeledInput from "@/components/ui/LabeledInput";
 import Button from "@/components/ui/Button";
@@ -9,22 +9,43 @@ export default function Index() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  const handleLogin = () => {
-    // TODO: validate login with API
-    router.replace("/home/home");
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter both email and password.");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:8080/api/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // ✅ Save user in async storage or context later
+        Alert.alert("Success", "Login successful!");
+        router.replace("/home/home"); // navigate to home
+      } else {
+        Alert.alert("Login Failed", data.message || "Invalid email or password.");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      Alert.alert("Error", "Unable to connect to server.");
+    }
   };
 
   return (
     <ImageBackground
-      source={require("@/assets/images/bubbles-bg.jpg")} // <-- your static image
+      source={require("@/assets/images/bubbles-bg.jpg")}
       style={styles.background}
-      resizeMode="cover" // or "contain" / "stretch"
+      resizeMode="cover"
     >
       <View style={styles.container}>
-        {/* Title */}
         <Text style={styles.title}>LaundroLink</Text>
-    
-        {/* Email Input */}
+
         <LabeledInput
           label="Email Address"
           placeholder="Enter email address"
@@ -33,7 +54,6 @@ export default function Index() {
           onChangeText={setEmail}
         />
 
-        {/* Password Input */}
         <LabeledInput
           label="Password"
           placeholder="Enter password"
@@ -42,7 +62,6 @@ export default function Index() {
           onChangeText={setPassword}
         />
 
-        {/* Login Button */}
         <Button title="Log In" onPress={handleLogin} />
       </View>
     </ImageBackground>
@@ -57,14 +76,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
-    backgroundColor: "rgba(255,255,255,0.8)", // optional: overlay for readability
+    backgroundColor: "rgba(255,255,255,0.8)",
     borderRadius: 12,
     margin: 16,
   },
   title: {
     fontSize: 36,
     fontWeight: "bold",
-    color: "#1E3A8A", // dark blue
+    color: "#1E3A8A",
     textAlign: "center",
     marginBottom: 40,
   },

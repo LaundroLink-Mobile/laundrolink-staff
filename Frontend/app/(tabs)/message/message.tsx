@@ -3,9 +3,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { fetchConversations } from "@/lib/messages";
-import Header from "@/components/Header"; 
+import Header from "@/components/Header";
 
-// In the future, replace this with your database fetch (e.g., Firebase, Supabase, or SQLite)
 const initialMessages = [
   {
     id: 1,
@@ -13,36 +12,42 @@ const initialMessages = [
     time: "08:26PM",
     lastMessage:
       "Good day! I just wanted to say thank you for your excellent laundry service.",
+    unread: true,
   },
   {
     id: 2,
     name: "Anna Reyes",
     time: "05:50PM",
     lastMessage: "Thank you for the great service!",
+    unread: false,
   },
   {
     id: 3,
     name: "Mark Villanueva",
     time: "01:15PM",
     lastMessage: "Appreciate your fast and reliable laundry service.",
+    unread: true,
   },
   {
     id: 4,
     name: "Mikha Lim",
     time: "27 Mar 2025",
     lastMessage: "Clothes were perfectly cleaned. Thank you!",
+    unread: false,
   },
   {
     id: 5,
     name: "Kevin Santos",
     time: "7 Mar 2025",
     lastMessage: "Very impressed with your service!",
+    unread: true,
   },
   {
     id: 6,
     name: "Carla Mendoza",
     time: "15 Feb 2025",
     lastMessage: "Thank you!",
+    unread: false,
   },
 ];
 
@@ -50,15 +55,22 @@ export default function MessageScreen() {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
 
-  // Example: This will later be replaced with DB sync
+  // Replace with DB fetch later
   useEffect(() => {
-  setMessages(fetchConversations());
-}, []);
-
+    setMessages(fetchConversations());
+  }, []);
 
   const handleOpenChat = (msg: any) => {
+    // ✅ Mark message as read locally
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msg.id ? { ...m, unread: false } : m
+      )
+    );
+
+    // Navigate to chat screen
     router.push({
-      pathname: "/message/chat", // Navigate to ChatScreen
+      pathname: "/message/chat",
       params: {
         id: msg.id.toString(),
         name: msg.name,
@@ -73,13 +85,17 @@ export default function MessageScreen() {
       <Header
         title="Messages"
         rightActions={
-            <>
-            <Ionicons name="search-outline" size={22} color="#fff" style={{ marginRight: 16 }} />
+          <>
+            <Ionicons
+              name="search-outline"
+              size={22}
+              color="#fff"
+              style={{ marginRight: 16 }}
+            />
             <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
-            </>
+          </>
         }
-        />
-
+      />
 
       {/* Messages List */}
       <ScrollView contentContainerStyle={styles.content}>
@@ -93,10 +109,15 @@ export default function MessageScreen() {
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <Text style={styles.name}>{msg.name}</Text>
-                <Text style={styles.time}>{msg.time}</Text>
+                <View style={styles.rightSection}>
+                  <Text style={[styles.time, msg.unread && styles.unreadTime]}>
+                    {msg.time}
+                  </Text>
+                  {msg.unread && <View style={styles.unreadDot} />}
+                </View>
               </View>
               <Text
-                style={styles.message}
+                style={[styles.message, msg.unread && styles.unreadMessage]}
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
@@ -175,5 +196,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#555",
     marginTop: 4,
+  },
+  rightSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  unreadMessage: {
+    fontWeight: "bold",
+    color: "#000",
+  },
+  unreadTime: {
+    fontWeight: "bold",
+    color: "#000",
+  },
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#1e90ff", // blue dot
   },
 });

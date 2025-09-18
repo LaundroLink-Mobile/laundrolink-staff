@@ -1,30 +1,25 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import mysql from "mysql2/promise";
+
+// Routes
+import userRoutes from "./routes/users.js";
 
 dotenv.config();
+
 const app = express();
+
+// ✅ Middlewares
 app.use(cors());
 app.use(express.json());
 
-// ✅ Create MySQL connection pool
-const db = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASS || "",
-  database: process.env.DB_NAME || "laundrolink",
+// ✅ API Routes
+app.use("/api/users", userRoutes);
+
+// ✅ Health check route (for quick testing in browser)
+app.get("/", (req, res) => {
+  res.send("🚀 Backend API is running...");
 });
 
-// ✅ Example route
-app.get("/orders", async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT * FROM orders");
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
