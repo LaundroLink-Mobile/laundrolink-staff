@@ -8,7 +8,7 @@ export default function HomeLayout() {
       <Stack.Screen name="pending" options={{ headerShown: false }} />
       <Stack.Screen name="processing" options={{ headerShown: false }} />
       <Stack.Screen name="completed" options={{ headerShown: false }} />
-      <Stack.Screen name="delivery" options={{ headerShown: false }} />
+      <Stack.Screen name="forDelivery" options={{ headerShown: false }} />
       <Stack.Screen name="rejected" options={{ headerShown: false }} />
       <Stack.Screen name="rejectMessage" options={{ headerShown: false }} />
       <Stack.Screen name="updateOrder" options={{ headerShown: false }} />

@@ -1,16 +1,10 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-} from "react-native";
-import StatusCard from "@/components/ui/StatusCard";
-import Header from "@/components/Header"; // ⬅️ import reusable header
+// screens/home.tsx
+import React, { useEffect, useState, useCallback } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { fetchOrdersFromDB, Order } from "@/lib/orders";
+import StatusCard from "@/components/ui/StatusCard";
+import Header from "@/components/Header";
+import { fetchOrders, Order } from "@/lib/orders"; // ✅ Import from the new lib file
 
 export default function HomeScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -18,28 +12,20 @@ export default function HomeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  useEffect(() => {
-    if (params?.orderId && params?.status) {
-      updateOrderStatus(
-        String(params.orderId),
-        String(params.status),
-        params.reason ? String(params.reason) : undefined,
-        params.note ? String(params.note) : undefined
-      );
-    }
-  }, [params]);
-
-  const loadOrders = async () => {
+  // ✅ Centralized function to load orders using the lib function
+  const loadOrders = useCallback(async () => {
     setLoading(true);
-    const newOrders = await fetchOrdersFromDB();
-    setOrders(newOrders.sort((a, b) => (a.date < b.date ? 1 : -1)));
+    const fetchedOrders = await fetchOrders();
+    setOrders(fetchedOrders);
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [loadOrders]);
 
+  // This function now only updates the local state.
+  // A real implementation would also call an API to persist the change.
   const updateOrderStatus = (
     orderId: string,
     newStatus: string,
@@ -52,66 +38,61 @@ export default function HomeScreen() {
       )
     );
   };
+  
+  // Effect to handle status updates coming from other screens
+  useEffect(() => {
+    if (params?.orderId && params?.status) {
+      updateOrderStatus(
+        String(params.orderId),
+        String(params.status),
+        params.reason ? String(params.reason) : undefined,
+        params.note ? String(params.note) : undefined
+      );
+    }
+  }, [params]);
 
-  const freshOrders = orders.filter((o) => o.status === "Order Confirmed");
+  const getOrderStatusCount = (status: string) => {
+    return orders.filter((o) => o.status === status).length;
+  };
+
+  const freshOrders = orders.filter((o) => o.status === "Pending");
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <Header title="Dashboard" showBack={false} backgroundColor="#00aaff" />
 
       {/* Status Cards */}
       <View style={styles.statusCardRow}>
-        <TouchableOpacity
-          style={styles.statusCardWrapper}
+        <StatusCardLink
+          icon="sync-outline"
+          label="Processing"
+          count={getOrderStatusCount("Processing")}
+          color="#3498db"
           onPress={() => router.push("/home/processing")}
-        >
-          <StatusCard
-            icon="sync-outline"
-            label="Processing"
-            count={orders.filter((o) => o.status === "Processing").length}
-            color="#3498db"
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.statusCardWrapper}
-          onPress={() => router.push("/home/delivery")}
-        >
-          <StatusCard
-            icon="cube-outline"
-            label="For Delivery"
-            count={orders.filter((o) => o.status === "For Delivery").length}
-            color="#9b59b6"
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.statusCardWrapper}
+        />
+        <StatusCardLink
+          icon="cube-outline"
+          label="For Delivery"
+          count={getOrderStatusCount("For Delivery")}
+          color="#9b59b6"
+          onPress={() => router.push("/home/forDelivery")}
+        />
+        <StatusCardLink
+          icon="checkmark-done-outline"
+          label="Completed"
+          count={getOrderStatusCount("Completed")}
+          color="#2ecc71"
           onPress={() => router.push("/home/completed")}
-        >
-          <StatusCard
-            icon="checkmark-done-outline"
-            label="Completed"
-            count={orders.filter((o) => o.status === "Completed").length}
-            color="#2ecc71"
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.statusCardWrapper}
+        />
+        <StatusCardLink
+          icon="ban-outline"
+          label="Rejected"
+          count={getOrderStatusCount("Rejected")}
+          color="#e74c3c"
           onPress={() => router.push("/home/rejected")}
-        >
-          <StatusCard
-            icon="ban-outline"
-            label="Rejected"
-            count={orders.filter((o) => o.status === "Rejected").length}
-            color="#e74c3c"
-          />
-        </TouchableOpacity>
+        />
       </View>
 
-      {/* Title outside scroll */}
       <Text style={styles.sectionTitle}>New Laundry Orders</Text>
 
       {/* Orders List */}
@@ -121,15 +102,15 @@ export default function HomeScreen() {
           <RefreshControl refreshing={loading} onRefresh={loadOrders} />
         }
       >
-        {freshOrders.map((order) => (
-          <OrderCard
-            key={order.orderId}
-            order={order}
-            onUpdateStatus={updateOrderStatus}
-          />
-        ))}
-
-        {freshOrders.length === 0 && (
+        {freshOrders.length > 0 ? (
+          freshOrders.map((order) => (
+            <OrderCard
+              key={order.orderId}
+              order={order}
+              onUpdateStatus={updateOrderStatus}
+            />
+          ))
+        ) : (
           <Text style={styles.noOrdersText}>
             🎉 No new orders to review!
           </Text>
@@ -138,6 +119,14 @@ export default function HomeScreen() {
     </View>
   );
 }
+
+// Reusable component for Status Cards to reduce repetition
+const StatusCardLink = ({ icon, label, count, color, onPress }: any) => (
+  <TouchableOpacity style={styles.statusCardWrapper} onPress={onPress}>
+    <StatusCard icon={icon} label={label} count={count} color={color} />
+  </TouchableOpacity>
+);
+
 
 function OrderCard({
   order,
@@ -150,9 +139,9 @@ function OrderCard({
 
   return (
     <View style={styles.orderCard}>
-      <Text style={styles.orderId}>{order.orderId}</Text>
+      <Text style={styles.orderId}>#{order.orderId}</Text>
       <Text style={styles.orderText}>
-        {order.customer} placed a laundry order.
+        Customer {order.customerName} placed a laundry order.
       </Text>
 
       <TouchableOpacity
@@ -178,7 +167,7 @@ function OrderCard({
           onPress={() =>
             router.push({
               pathname: "/home/rejectMessage",
-              params: { orderId: order.orderId, customer: order.customer },
+              params: { orderId: order.orderId, customer: order.customerName },
             })
           }
         >
@@ -189,10 +178,10 @@ function OrderCard({
   );
 }
 
+// --- Styles (no changes needed) ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f6fa" },
-  scrollContainer: { padding: 16 },
-
+  scrollContainer: { padding: 16, flexGrow: 1 },
   statusCardRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -200,18 +189,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   statusCardWrapper: {
-    width: "22%",
+    flex: 1,
+    marginHorizontal: 4,
   },
-
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 5,
     marginTop: 8,
+    marginBottom: 5,
     color: "#111",
     paddingHorizontal: 16,
   },
-
   orderCard: {
     backgroundColor: "#fff",
     borderRadius: 10,
@@ -228,7 +216,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontWeight: "500",
   },
-
   buttonRow: { flexDirection: "row", justifyContent: "space-between" },
   button: {
     flex: 1,
@@ -240,6 +227,5 @@ const styles = StyleSheet.create({
   acceptBtn: { backgroundColor: "green" },
   rejectBtn: { backgroundColor: "darkred" },
   buttonText: { color: "#fff", fontWeight: "600" },
-
-  noOrdersText: { textAlign: "center", color: "#666", marginTop: 30 },
+  noOrdersText: { textAlign: "center", color: "#666", marginTop: 40, fontSize: 16 },
 });

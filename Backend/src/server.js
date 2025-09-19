@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 
 // Routes
 import userRoutes from "./routes/users.js";
+import orderRoutes from "./routes/orders.js";
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 
 // ✅ API Routes
 app.use("/api/users", userRoutes);
+app.use("/api/orders", orderRoutes);
 
 // ✅ Health check route (for quick testing in browser)
 app.get("/", (req, res) => {
