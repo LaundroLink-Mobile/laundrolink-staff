@@ -1,32 +1,34 @@
+// editWeight.tsx
 import { updateOrderWeight } from "@/lib/orders";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, } from "react-native"; // ✅ Import Alert for error messages
+
 import Header from "@/components/Header";
 
 export default function EditWeight() {
   const router = useRouter();
-  const { orderId, prevWeight } = useLocalSearchParams(); // 👈 passed from orderDetail
+  const { orderId, prevWeight } = useLocalSearchParams();
 
   const [weight, setWeight] = useState(prevWeight ? String(prevWeight) : "");
   const [successMsg, setSuccessMsg] = useState("");
 
   const handleUpdate = async () => {
-    if (!orderId || !weight) return; // safeguard
+    if (!orderId || !weight) return;
 
-    await updateOrderWeight(String(orderId), parseFloat(weight));
-    setSuccessMsg(`Laundry weight has been updated to ${weight} kg.`);
+    // ✅ Call the API and check if it was successful
+    const success = await updateOrderWeight(String(orderId), parseFloat(weight));
 
-    // go back after short delay
-    setTimeout(() => router.back(), 1500);
+    if (success) {
+      setSuccessMsg(`Laundry weight has been updated to ${weight} kg.`);
+      // Go back after a short delay
+      setTimeout(() => router.back(), 1500);
+    } else {
+      // ✅ Show an error message if the update failed
+      Alert.alert("Error", "Failed to update weight. Please try again.");
+    }
   };
-
+  
   return (
     <View style={styles.container}>
       <Header title="Edit Laundry Weight" />

@@ -1,12 +1,12 @@
+// rejectMessage.tsx
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { updateOrderStatus } from "@/lib/orders";
 import Header from "@/components/Header";
 
 export default function RejectOrderScreen() {
-  const { orderId, customer } = useLocalSearchParams<{ orderId: string; customer: string }>();
+  const { orderId, customer, shopId } = useLocalSearchParams<{ orderId: string; customer: string; shopId: string}>();
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
   const router = useRouter();
@@ -17,33 +17,39 @@ export default function RejectOrderScreen() {
       return;
     }
 
-    // ✅ Store reason and note separately
-    await updateOrderStatus(orderId, "Rejected", reason, note);
+    // This call now correctly sends all the data to the backend
+    const success = await updateOrderStatus(orderId, "Rejected", reason, note);
 
-    router.replace("/home/rejected");
+    if (success) {
+      // Navigate back to the main dashboard after rejecting
+      // The home screen will refresh automatically with useFocusEffect
+      router.replace({
+        pathname: "/home/home",
+        params: { shopId: shopId },
+      }); 
+    } else {
+      Alert.alert("Error", "Failed to reject order.");
+    }
   };
 
-  const handleCancel = async () => {
-    await updateOrderStatus(orderId, "Order Confirmed");
-    router.replace("/home/home");
+  // ✅ This function now simply goes back to the previous screen
+  const handleCancel = () => {
+    router.back();
   };
 
   return (
     <View style={styles.container}>
-        {/* Unified Header */}
-        <Header title="Reject Order" />
-
-      {/* Content */}
+      <Header title="Reject Order" />
       <View style={styles.card}>
         <Text style={styles.title}>Reject Order</Text>
-        <Text style={styles.orderId}>Order {orderId}</Text>
+        <Text style={styles.orderId}>Order #{orderId}</Text>
         <Text style={styles.customer}>{customer}</Text>
 
         <Text style={styles.label}>Reason:</Text>
         <TextInput
           value={reason}
           onChangeText={setReason}
-          placeholder="Enter rejection reason"
+          placeholder="e.g., Out of service area, Items damaged"
           style={styles.input}
         />
 
@@ -57,7 +63,7 @@ export default function RejectOrderScreen() {
         />
 
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: "#0077b6" }]}
+          style={[styles.button, { backgroundColor: "#c82333" }]} // Changed to red
           onPress={handleSubmit}
         >
           <Text style={styles.buttonText}>Submit Rejection</Text>
@@ -76,34 +82,12 @@ export default function RejectOrderScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f9f9f9" },
-  card: {
-    margin: 20,
-    marginTop: 40,
-    padding: 20,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
+  card: { margin: 20, marginTop: 20, padding: 20, backgroundColor: "#fff", borderRadius: 10, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 5, elevation: 3 },
   title: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
   orderId: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
-  customer: { fontSize: 16, marginBottom: 2 },
-  label: { fontWeight: "600", marginTop: 30, marginBottom: 5 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 5,
-    backgroundColor: "#fff",
-  },
-  button: {
-    marginTop: 40,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-  },
+  customer: { fontSize: 16, color: '#555', marginBottom: 20 },
+  label: { fontWeight: "600", marginTop: 15, marginBottom: 5 },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, marginTop: 5, backgroundColor: "#fff", textAlignVertical: 'top' },
+  button: { marginTop: 15, padding: 15, borderRadius: 8, alignItems: "center" },
   buttonText: { color: "#fff", fontWeight: "bold" },
 });

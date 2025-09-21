@@ -1,113 +1,88 @@
-// lib/messages.ts
+import { API_URL } from "./api";
 
-export type ChatMessage = {
-  id: number;
-  sender: "me" | "other";
-  text?: string;
-  time: string;
-  read?: boolean; // 👈 added this
-};
-
-export type Conversation = {
-  id: string;
+// Type for the conversation list view
+export interface ConversationPreview {
+  conversationId: string;
+  partnerId: string;
   name: string;
-  phone: string;
-  messages: ChatMessage[];
+  time: string;
+  lastMessage: string;
+  unreadCount: number;
+}
+
+// Type for a single message in a chat
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  receiverId: string;
+  text?: string;
+  image?: string;
+  time: string;
+  status: string;
+}
+
+/**
+ * Fetches all conversation previews for a user.
+ */
+export const fetchConversations = async (userId: string): Promise<ConversationPreview[]> => {
+  try {
+    const response = await fetch(`${API_URL}/messages/conversations/${userId}`);
+    if (!response.ok) throw new Error("Failed to fetch conversations");
+    return await response.json();
+  } catch (error) {
+    console.error("Error in fetchConversations:", error);
+    return [];
+  }
 };
 
-let conversations: Conversation[] = [
-  {
-    id: "1",
-    name: "Jennifer Huh",
-    phone: "09171234567",
-    messages: [
-      { id: 1, sender: "other", text: "Hi, do you see a black pants in there?", time: "07:15AM", read: false },
-      { id: 2, sender: "me", text: "Good morning, yes. It’s here.", time: "07:16AM", read: true },
-    ],
-  },
-  {
-    id: "2",
-    name: "Anna Reyes",
-    phone: "09171234568",
-    messages: [
-      { id: 1, sender: "other", text: "Thank you for the great service!", time: "05:50PM", read: false },
-    ],
-  },
-  {
-    id: "3",
-    name: "Mark Villanueva",
-    phone: "09171234569",
-    messages: [
-      { id: 1, sender: "other", text: "Appreciate your fast and reliable laundry service.", time: "01:15PM", read: false },
-    ],
-  },
-  {
-    id: "4",
-    name: "Mikha Lim",
-    phone: "09171234570",
-    messages: [
-      { id: 1, sender: "other", text: "Clothes were perfectly cleaned. Thank you!", time: "27 Mar 2025", read: false },
-    ],
-  },
-  {
-    id: "5",
-    name: "Kevin Santos",
-    phone: "09171234571",
-    messages: [
-      { id: 1, sender: "other", text: "Very impressed with your service!", time: "7 Mar 2025", read: false },
-    ],
-  },
-  {
-    id: "6",
-    name: "Carla Mendoza",
-    phone: "09171234572",
-    messages: [
-      { id: 1, sender: "other", text: "Thank you!", time: "15 Feb 2025", read: false },
-    ],
-  },
-];
-
-// Fetch all conversations with preview
-export const fetchConversations = () => {
-  return conversations.map((c) => {
-    const lastMsg = c.messages[c.messages.length - 1];
-    return {
-      id: Number(c.id),
-      name: c.name,
-      time: lastMsg?.time || "",
-      lastMessage: lastMsg?.text || "",
-      unread: lastMsg?.sender === "other" && lastMsg?.read === false, // 👈 unread if last message is from "other" and not read
-    };
-  });
+/**
+ * Fetches the full chat history for a single conversation.
+ */
+export const fetchConversationHistory = async (conversationId: string): Promise<ChatMessage[]> => {
+  try {
+    // This is now simpler and faster, looking up by conversationId
+    const response = await fetch(`${API_URL}/messages/history/${conversationId}`);
+    if (!response.ok) throw new Error("Failed to fetch history");
+    return await response.json();
+  } catch (error) {
+    console.error("Error in fetchConversationHistory:", error);
+    return [];
+  }
 };
 
-// Add a new message
-export const sendMessageToCustomer = async (
-  conversationId: string,
-  text: string
-) => {
-  const convo = conversations.find((c) => c.id === conversationId);
-  if (!convo) return;
-
-  const newMsg: ChatMessage = {
-    id: convo.messages.length + 1,
-    sender: "me",
-    text,
-    time: new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-    read: true, // 👈 sent messages are always "read"
-  };
-  convo.messages.push(newMsg);
+/**
+ * Sends a new message and updates the conversation.
+ */
+export const sendMessage = async (senderId: string, receiverId: string, messageText: string): Promise<ChatMessage | null> => {
+  try {
+    const response = await fetch(`${API_URL}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senderId, receiverId, messageText }),
+    });
+    if (!response.ok) throw new Error("Failed to send message");
+    return await response.json();
+  } catch (error) {
+    console.error("Error in sendMessage:", error);
+    return null;
+  }
 };
 
-// Mark conversation as read
-export const markConversationAsRead = (conversationId: string) => {
-  const convo = conversations.find((c) => c.id === conversationId);
-  if (!convo) return;
-
-  convo.messages = convo.messages.map((m) =>
-    m.sender === "other" ? { ...m, read: true } : m
-  );
+/**
+ * Marks all messages in a conversation as read for a given user.
+ */
+export const markMessagesAsRead = async (conversationId: string, userId: string): Promise<boolean> => {
+    try {
+        const response = await fetch(`${API_URL}/messages/read`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId, userId }),
+        });
+        const data = await response.json();
+        return response.ok && data.success;
+    } catch (error) {
+        console.error("Error in markMessagesAsRead:", error);
+        return false;
+    }
 };

@@ -1,56 +1,45 @@
 // screens/home.tsx
-import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import React, { useState, useCallback } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from "react-native";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import StatusCard from "@/components/ui/StatusCard";
 import Header from "@/components/Header";
-import { fetchOrders, Order } from "@/lib/orders"; // ✅ Import from the new lib file
+import { fetchOrders, updateOrderStatus, Order } from "@/lib/orders";
+import { getCurrentUser } from "@/lib/auth";
 
 export default function HomeScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const params = useLocalSearchParams();
+  
+  // ✅ Get the logged-in user's data directly
+  const user = getCurrentUser();
+  const shopId = user?.ShopID; // Get the shopId from the user object
 
-  // ✅ Centralized function to load orders using the lib function
   const loadOrders = useCallback(async () => {
-    setLoading(true);
-    const fetchedOrders = await fetchOrders();
-    setOrders(fetchedOrders);
-    setLoading(false);
-  }, []);
+    if ( shopId ) {
+      setLoading(true);
+      const fetchedOrders = await fetchOrders(shopId);
+      setOrders(fetchedOrders);
+      setLoading(false);
+    }
+  }, [shopId]);
 
-  useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+  useFocusEffect(
+    useCallback(() => {
+      loadOrders();
+    }, [loadOrders])
+  );
 
-  // This function now only updates the local state.
-  // A real implementation would also call an API to persist the change.
-  const updateOrderStatus = (
-    orderId: string,
-    newStatus: string,
-    reason?: string,
-    note?: string
-  ) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.orderId === orderId ? { ...o, status: newStatus, reason, note } : o
-      )
-    );
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    const success = await updateOrderStatus(orderId, newStatus);
+    if (success) {
+      await loadOrders(); 
+    } else {
+      Alert.alert("Error", "Failed to update order status.");
+    }
   };
   
-  // Effect to handle status updates coming from other screens
-  useEffect(() => {
-    if (params?.orderId && params?.status) {
-      updateOrderStatus(
-        String(params.orderId),
-        String(params.status),
-        params.reason ? String(params.reason) : undefined,
-        params.note ? String(params.note) : undefined
-      );
-    }
-  }, [params]);
-
   const getOrderStatusCount = (status: string) => {
     return orders.filter((o) => o.status === status).length;
   };
@@ -68,28 +57,40 @@ export default function HomeScreen() {
           label="Processing"
           count={getOrderStatusCount("Processing")}
           color="#3498db"
-          onPress={() => router.push("/home/processing")}
+          onPress={() => router.push({ 
+            pathname: "/home/processing", 
+            params: { shopId: shopId } 
+          })}
         />
         <StatusCardLink
           icon="cube-outline"
           label="For Delivery"
           count={getOrderStatusCount("For Delivery")}
           color="#9b59b6"
-          onPress={() => router.push("/home/forDelivery")}
+          onPress={() => router.push({ 
+            pathname: "/home/forDelivery", 
+            params: { shopId: shopId } 
+          })}
         />
         <StatusCardLink
           icon="checkmark-done-outline"
           label="Completed"
           count={getOrderStatusCount("Completed")}
           color="#2ecc71"
-          onPress={() => router.push("/home/completed")}
+          onPress={() => router.push({ 
+            pathname: "/home/completed", 
+            params: { shopId: shopId } 
+          })}
         />
         <StatusCardLink
           icon="ban-outline"
           label="Rejected"
           count={getOrderStatusCount("Rejected")}
           color="#e74c3c"
-          onPress={() => router.push("/home/rejected")}
+          onPress={() => router.push({ 
+            pathname: "/home/rejected", 
+            params: { shopId: shopId } 
+          })}
         />
       </View>
 
@@ -107,7 +108,9 @@ export default function HomeScreen() {
             <OrderCard
               key={order.orderId}
               order={order}
-              onUpdateStatus={updateOrderStatus}
+              onUpdateStatus={handleStatusUpdate}
+              // ✅ Pass the shopId down to the OrderCard component
+              shopId={shopId as string}
             />
           ))
         ) : (
@@ -120,7 +123,6 @@ export default function HomeScreen() {
   );
 }
 
-// Reusable component for Status Cards to reduce repetition
 const StatusCardLink = ({ icon, label, count, color, onPress }: any) => (
   <TouchableOpacity style={styles.statusCardWrapper} onPress={onPress}>
     <StatusCard icon={icon} label={label} count={count} color={color} />
@@ -131,9 +133,11 @@ const StatusCardLink = ({ icon, label, count, color, onPress }: any) => (
 function OrderCard({
   order,
   onUpdateStatus,
+  shopId, 
 }: {
   order: Order;
   onUpdateStatus: (orderId: string, status: string) => void;
+  shopId: string; 
 }) {
   const router = useRouter();
 
@@ -147,7 +151,7 @@ function OrderCard({
       <TouchableOpacity
         onPress={() =>
           router.push({
-            pathname: "/home/orderdetail",
+            pathname: "/home/orderDetail",
             params: { orderId: order.orderId },
           })
         }
@@ -167,7 +171,11 @@ function OrderCard({
           onPress={() =>
             router.push({
               pathname: "/home/rejectMessage",
-              params: { orderId: order.orderId, customer: order.customerName },
+              params: { 
+                orderId: order.orderId, 
+                customer: order.customerName, 
+                shopId: shopId 
+              },
             })
           }
         >

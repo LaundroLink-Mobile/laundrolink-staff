@@ -1,7 +1,9 @@
-import { Tabs } from "expo-router";
+import { Tabs, useLocalSearchParams } from "expo-router"; // ✅ Import useLocalSearchParams
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function TabLayout() {
+  const { shopId, userId } = useLocalSearchParams(); // ✅ Get params passed from login
+
   return (
     <Tabs
       screenOptions={{
@@ -22,6 +24,8 @@ export default function TabLayout() {
     >
       <Tabs.Screen
         name="home"
+        // ✅ Pass params to home screen
+        initialParams={{ shopId, userId }} 
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
@@ -31,6 +35,8 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="order"
+        // ✅ Pass params to order screen
+        initialParams={{ shopId, userId }} 
         options={{
           title: "Order",
           tabBarIcon: ({ color, focused }) => (
@@ -40,6 +46,8 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="message"
+        // ✅ Pass params to message screen
+        initialParams={{ shopId, userId }}
         options={{
           title: "Messages",
           tabBarIcon: ({ color, focused }) => (

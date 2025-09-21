@@ -1,132 +1,75 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { fetchConversations } from "@/lib/messages";
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { fetchConversations, ConversationPreview } from "@/lib/messages";
+import { getCurrentUser } from "@/lib/auth";
 import Header from "@/components/Header";
-
-const initialMessages = [
-  {
-    id: 1,
-    name: "Jennifer Huh",
-    time: "08:26PM",
-    lastMessage:
-      "Good day! I just wanted to say thank you for your excellent laundry service.",
-    unread: true,
-  },
-  {
-    id: 2,
-    name: "Anna Reyes",
-    time: "05:50PM",
-    lastMessage: "Thank you for the great service!",
-    unread: false,
-  },
-  {
-    id: 3,
-    name: "Mark Villanueva",
-    time: "01:15PM",
-    lastMessage: "Appreciate your fast and reliable laundry service.",
-    unread: true,
-  },
-  {
-    id: 4,
-    name: "Mikha Lim",
-    time: "27 Mar 2025",
-    lastMessage: "Clothes were perfectly cleaned. Thank you!",
-    unread: false,
-  },
-  {
-    id: 5,
-    name: "Kevin Santos",
-    time: "7 Mar 2025",
-    lastMessage: "Very impressed with your service!",
-    unread: true,
-  },
-  {
-    id: 6,
-    name: "Carla Mendoza",
-    time: "15 Feb 2025",
-    lastMessage: "Thank you!",
-    unread: false,
-  },
-];
 
 export default function MessageScreen() {
   const router = useRouter();
-  const [messages, setMessages] = useState(initialMessages);
+  const [conversations, setConversations] = useState<ConversationPreview[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Replace with DB fetch later
-  useEffect(() => {
-    setMessages(fetchConversations());
-  }, []);
+  const user = getCurrentUser();
+  const userId = user?.UserID;
 
-  const handleOpenChat = (msg: any) => {
-    // ✅ Mark message as read locally
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === msg.id ? { ...m, unread: false } : m
-      )
-    );
+  useFocusEffect(
+    useCallback(() => {
+      const loadConversations = async () => {
+        if (userId) {
+          setLoading(true);
+          const data = await fetchConversations(userId);
+          setConversations(data);
+          setLoading(false);
+        }
+      };
+      loadConversations();
+    }, [userId])
+  );
 
-    // Navigate to chat screen
+  const handleOpenChat = (convo: ConversationPreview) => {
+    // ✅ Pass the conversationId to the chat screen for a faster lookup
     router.push({
       pathname: "/message/chat",
       params: {
-        id: msg.id.toString(),
-        name: msg.name,
-        lastMessage: msg.lastMessage,
-        time: msg.time,
+        conversationId: convo.conversationId,
+        partnerName: convo.name,
+        partnerId: convo.partnerId, // Keep this for reference if needed
       },
     });
   };
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Messages"
-        rightActions={
-          <>
-            <Ionicons
-              name="search-outline"
-              size={22}
-              color="#fff"
-              style={{ marginRight: 16 }}
-            />
-            <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
-          </>
-        }
-      />
-
-      {/* Messages List */}
-      <ScrollView contentContainerStyle={styles.content}>
-        {messages.map((msg) => (
-          <TouchableOpacity
-            key={msg.id}
-            style={styles.card}
-            onPress={() => handleOpenChat(msg)}
-          >
-            <Ionicons name="person-circle-outline" size={40} color="#555" />
-            <View style={styles.cardContent}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.name}>{msg.name}</Text>
-                <View style={styles.rightSection}>
-                  <Text style={[styles.time, msg.unread && styles.unreadTime]}>
-                    {msg.time}
-                  </Text>
-                  {msg.unread && <View style={styles.unreadDot} />}
+      <Header title="Messages" />
+      {loading ? (
+        <ActivityIndicator size="large" color="#007bff" style={{ marginTop: 20 }} />
+      ) : (
+        <ScrollView contentContainerStyle={styles.content}>
+          {conversations.map((convo) => (
+            // ✅ Use conversationId as the key
+            <TouchableOpacity key={convo.conversationId} style={styles.card} onPress={() => handleOpenChat(convo)}>
+              <Ionicons name="person-circle-outline" size={40} color="#555" />
+              <View style={styles.cardContent}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.name}>{convo.name}</Text>
+                  <View style={styles.rightSection}>
+                    <Text style={[styles.time, convo.unreadCount > 0 && styles.unreadTime]}>
+                      {new Date(convo.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    {convo.unreadCount > 0 && <View style={styles.unreadDot} />}
+                  </View>
                 </View>
+                <Text style={[styles.message, convo.unreadCount > 0 && styles.unreadMessage]} numberOfLines={1}>
+                  {convo.lastMessage}
+                </Text>
               </View>
-              <Text
-                style={[styles.message, msg.unread && styles.unreadMessage]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {msg.lastMessage}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -135,31 +78,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f9fafb",
-  },
-  header: {
-    backgroundColor: "#89CFF0",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    justifyContent: "space-between",
-  },
-  iconBtn: {
-    paddingRight: 8,
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#000",
-    flex: 1,
-    textAlign: "center",
-  },
-  rightIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  iconSpacing: {
-    marginRight: 12,
   },
   content: {
     padding: 12,
@@ -172,7 +90,7 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     padding: 12,
     marginBottom: 12,
-    alignItems: "flex-start",
+    alignItems: "center",
     height: 80,
   },
   cardContent: {
@@ -214,6 +132,6 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#1e90ff", // blue dot
+    backgroundColor: "#1e90ff",
   },
 });

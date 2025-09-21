@@ -1,64 +1,81 @@
-import { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { useState, useEffect, useCallback } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from "react-native";
+import { useFocusEffect } from "expo-router";
 import StatusCard from "@/components/ui/StatusCard";
 import { LineChart } from "react-native-chart-kit";
-import { Dimensions } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
-import Header from "@/components/Header"; 
+import Header from "@/components/Header";
+import { fetchOrderSummary, OrderSummaryData } from "@/lib/orders";
+import { getCurrentUser } from "@/lib/auth"; // ✅ Import the function to get the current user
 
 const screenWidth = Dimensions.get("window").width;
 
+const defaultChartData = {
+  labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  datasets: [{ data: [0, 0, 0, 0, 0, 0, 0] }],
+};
+
 export default function OrderScreen() {
-  const router = useRouter();
+  // ✅ Get the logged-in user's data directly
+  const user = getCurrentUser();
+  const shopId = user?.ShopID;
+
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedRange, setSelectedRange] = useState("This Week");
+  const [summary, setSummary] = useState<OrderSummaryData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const options = ["Today", "This Week", "This Month", "Customize"];
-  const handleSelect = (option) => {
+  const options = ["Today", "This Week", "This Month"];
+
+  const loadSummary = useCallback(async () => {
+    // ✅ This logic now uses the shopId from the user object
+    if (shopId) {
+      setLoading(true);
+      const data = await fetchOrderSummary(shopId, selectedRange);
+      setSummary(data);
+      setLoading(false);
+    }
+  }, [shopId, selectedRange]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSummary();
+    }, [loadSummary])
+  );
+
+  const handleSelect = (option: string) => {
     setSelectedRange(option);
     setMenuVisible(false);
   };
 
-  // Temporary data for the Orders Table
-  const orders = [
-    { id: "ORD-001", customer: "Alice Johnson", status: "Completed", amount: 499.99 },
-    { id: "ORD-002", customer: "Bob Smith", status: "Pending", amount: 259.50 },
-    { id: "ORD-003", customer: "Charlie Brown", status: "Completed", amount: 120.00 },
-    { id: "ORD-004", customer: "Diana Prince", status: "Cancelled", amount: 89.99 },
-    { id: "ORD-005", customer: "Ethan Hunt", status: "Completed", amount: 320.75 },
-  ];
+  const chartData = summary?.chartData?.length
+    ? {
+        labels: summary.chartData.map(d => d.label),
+        datasets: [{ data: summary.chartData.map(d => d.revenue) }]
+      }
+    : defaultChartData;
+    
+  const handleExport = (type: string) => {
+    Alert.alert("Export", `Exporting as ${type} is not yet implemented.`);
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-        <Header title="Orders" backgroundColor="#00aaff" />
-
+      <Header title="Orders" />
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Date Section */}
         <View style={styles.dateRow}>
           <Text style={styles.sectionTitle}>Date</Text>
-
-          {/* Dropdown */}
           <View style={{ position: "relative" }}>
-            <TouchableOpacity
-              style={styles.dropdownBtn}
-              onPress={() => setMenuVisible(!menuVisible)}
-            >
+            <TouchableOpacity style={styles.dropdownBtn} onPress={() => setMenuVisible(!menuVisible)}>
               <View style={styles.dropdownContent}>
                 <Text style={styles.dropdownText}>{selectedRange}</Text>
                 <Ionicons name="chevron-down" size={18} color="#0077b6" />
               </View>
             </TouchableOpacity>
-
             {menuVisible && (
               <View style={styles.menu}>
                 {options.map((option) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={styles.menuItem}
-                    onPress={() => handleSelect(option)}
-                  >
+                  <TouchableOpacity key={option} style={styles.menuItem} onPress={() => handleSelect(option)}>
                     <Text style={styles.menuText}>{option}</Text>
                   </TouchableOpacity>
                 ))}
@@ -67,99 +84,63 @@ export default function OrderScreen() {
           </View>
         </View>
 
-        {/* Status Cards */}
-        <View style={styles.statusCardRow}>
-        <View style={styles.statusCardWrapper}>
-            <StatusCard icon="document-text-outline" label="Total" count={159} color="#00aaff" />
-        </View>
-        <View style={styles.statusCardWrapper}>
-            <StatusCard icon="checkmark-circle-outline" label="Completed" count={148} color="#00aaff" />
-        </View>
-        <View style={styles.statusCardWrapper}>
-            <StatusCard icon="time-outline" label="Pending" count={11} color="#00aaff" />
-        </View>
-        <View style={styles.statusCardWrapper}>
-            <StatusCard icon="bar-chart-outline" label="Revenue" count={30067.79} color="#00aaff" />
-        </View>
+        <View style={styles.statusCardRow}> 
+          <View style={styles.statusCardWrapper}>
+            <StatusCard icon="document-text-outline" label="Total" count={summary?.totalOrders ?? 0} color="#00aaff" />
+          </View>
+          <View style={styles.statusCardWrapper}>
+            <StatusCard icon="checkmark-circle-outline" label="Completed" count={summary?.completedOrders ?? 0} color="#28a745" />
+          </View>
+          <View style={styles.statusCardWrapper}>
+            <StatusCard icon="time-outline" label="Pending" count={summary?.pendingOrders ?? 0} color="#ffc107" />
+          </View>
+          <View style={styles.statusCardWrapper}>
+            <StatusCard icon="bar-chart-outline" label="Revenue" count={summary?.totalRevenue ?? 0} color="#17a2b8" />
+          </View>
         </View>
 
-
-        {/* Revenue Title */}
         <Text style={styles.sectionTitle}>Revenue</Text>
-
-        {/* Temporary Chart */}
+        
         <View style={styles.chartBox}>
+          {loading ? <ActivityIndicator /> : (
             <LineChart
-            data={{
-                labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-                datasets: [
-                {
-                    data: [500, 800, 1200, 750, 950, 1100, 1400], // mock revenue values
-                },
-                ],
-            }}
-            width={screenWidth - 40}
-            height={160}
-            yAxisLabel="₱"
-            yAxisSuffix=""
-            chartConfig={{
-                backgroundColor: "#fff",
-                backgroundGradientFrom: "#fff",
-                backgroundGradientTo: "#fff",
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                propsForDots: {
-                r: "5",
-                strokeWidth: "2",
-                stroke: "#0077b6",
-                },
-            }}
-            bezier
-            style={{
-                borderRadius: 10,
-            }}
+              data={chartData}
+              width={screenWidth - 40}
+              height={160}
+              yAxisLabel="₱"
+              yAxisSuffix=""
+              chartConfig={chartConfig}
+              bezier
+              style={{ borderRadius: 10 }}
             />
+          )}
         </View>
 
-        {/* Export Buttons */}
         <View style={styles.exportRow}>
-          <View style={[styles.exportBtn, { backgroundColor: "#00aaff" }]}>
+          <TouchableOpacity style={[styles.exportBtn, { backgroundColor: "#c82333" }]} onPress={() => handleExport('PDF')}>
             <Text style={styles.exportText}>Export PDF</Text>
-          </View>
-          <View style={[styles.exportBtn, { backgroundColor: "#00aaff" }]}>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.exportBtn, { backgroundColor: "#218838" }]} onPress={() => handleExport('Excel')}>
             <Text style={styles.exportText}>Export Excel</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
-        {/* Orders Table */}
         <View style={styles.tableBox}>
-          <Text style={styles.tableTitle}>📋 Orders Table</Text>
+          <Text style={styles.tableTitle}>📋 Recent Orders</Text>
           <View style={styles.tableHeader}>
             <Text style={[styles.tableCell, styles.headerCell]}>Order ID</Text>
             <Text style={[styles.tableCell, styles.headerCell]}>Customer</Text>
             <Text style={[styles.tableCell, styles.headerCell]}>Status</Text>
             <Text style={[styles.tableCell, styles.headerCell]}>Amount</Text>
           </View>
-          {orders.map((order, index) => (
-            <View
-              key={order.id}
-              style={[
-                styles.tableRow,
-                index % 2 === 0 ? styles.rowEven : styles.rowOdd,
-              ]}
-            >
+          {summary?.recentOrders.map((order, index) => (
+            <View key={order.id} style={[styles.tableRow, index % 2 === 0 ? styles.rowEven : styles.rowOdd]}>
               <Text style={styles.tableCell}>{order.id}</Text>
               <Text style={styles.tableCell}>{order.customer}</Text>
-              <Text
-                style={[
-                  styles.tableCell,
-                  { color: order.status === "Completed" ? "green" : order.status === "Pending" ? "orange" : "red" },
-                ]}
-              >
+              <Text style={[styles.tableCell, { color: order.status === "Completed" ? "green" : order.status === "Pending" ? "orange" : "red" }]}>
                 {order.status}
               </Text>
-              <Text style={styles.tableCell}>₱{order.amount.toFixed(2)}</Text>
+              <Text style={styles.tableCell}>₱{order.amount?.toFixed(2) ?? 'N/A'}</Text>
             </View>
           ))}
         </View>
@@ -168,84 +149,38 @@ export default function OrderScreen() {
   );
 }
 
+// Chart configuration
+const chartConfig = {
+  backgroundColor: "#fff", backgroundGradientFrom: "#fff", backgroundGradientTo: "#fff", decimalPlaces: 0,
+  color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
+  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+  propsForDots: { r: "5", strokeWidth: "2", stroke: "#0077b6" },
+};
+
+// ... existing styles, but I've updated them slightly for better presentation
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f9fafb" },
   content: { padding: 16 },
-  header: { backgroundColor: "#89CFF0", paddingVertical: 16, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", },
-  headerText: { fontSize: 20, fontWeight: "bold", color: "#000",  marginLeft: 10, },
-
-  dateRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 5,
-    zIndex: 10,
-  },
-  sectionTitle: { fontSize: 16, fontWeight: "600" },
-
-  dropdownBtn: {
-    backgroundColor: "#e6f7ff",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  dropdownContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center", // center text and icon
-    },
-  dropdownText: { fontSize: 14, fontWeight: "500", color: "#0077b6" , marginRight: 4,},
-
-  menu: {
-    position: "absolute",
-    top: "100%",
-    right: 0,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    marginTop: 4,
-    paddingVertical: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 20,
-  },
+  dateRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 5, zIndex: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10 },
+  dropdownBtn: { backgroundColor: "#e6f7ff", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 },
+  dropdownContent: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  dropdownText: { fontSize: 14, fontWeight: "500", color: "#0077b6", marginRight: 4 },
+  menu: { position: "absolute", top: "100%", right: 0, backgroundColor: "#fff", borderRadius: 8, marginTop: 4, paddingVertical: 6, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, zIndex: 20 },
   menuItem: { paddingVertical: 8, paddingHorizontal: 12 },
   menuText: { fontSize: 14, color: "#333" },
-
-  statusRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
-
-  statusCardRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 2, // left & right spacing
-    paddingVertical: 12,
-    marginBottom: 20,
-    },
-
-    statusCardWrapper: {
-    width: "22%", // keep all 4 in one row
-    },
-
-  chartBox: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
+  statusCardRow: { flexDirection: "row", justifyContent: "space-between", marginHorizontal: -4, paddingVertical: 12, marginBottom: 10 },
+  statusCardWrapper: { flex: 1, marginHorizontal: 4 },
+  chartBox: { backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#ddd", alignItems: "center", justifyContent: "center", marginBottom: 20, paddingVertical: 10 },
   exportRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
   exportBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: "center", marginHorizontal: 5 },
   exportText: { color: "#fff", fontWeight: "600" },
-
   tableBox: { backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#ddd", padding: 12, marginBottom: 30 },
   tableTitle: { fontWeight: "600", fontSize: 16, marginBottom: 8, color: "#000" },
-  tableHeader: { flexDirection: "row", backgroundColor: "#e6f7ff", borderRadius: 6, marginBottom: 4 },
-  tableRow: { flexDirection: "row", paddingVertical: 6, paddingHorizontal: 4, borderRadius: 4 },
+  tableHeader: { flexDirection: "row", backgroundColor: "#e6f7ff", borderRadius: 6, marginBottom: 4, paddingVertical: 8, paddingHorizontal: 4 },
+  tableRow: { flexDirection: "row", paddingVertical: 8, paddingHorizontal: 4, borderRadius: 4, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   rowEven: { backgroundColor: "#f9f9f9" },
   rowOdd: { backgroundColor: "#fff" },
-  tableCell: { flex: 1, fontSize: 13, color: "#333" },
+  tableCell: { flex: 1, fontSize: 13, color: "#333", textAlign: 'center' },
   headerCell: { fontWeight: "700", color: "#0077b6" },
 });

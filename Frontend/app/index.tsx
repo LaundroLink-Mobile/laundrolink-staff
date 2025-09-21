@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ImageBackground, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import LabeledInput from "@/components/ui/LabeledInput";
 import Button from "@/components/ui/Button";
+import { login } from "@/lib/auth";
 
 export default function Index() {
   const [email, setEmail] = useState("");
@@ -25,9 +26,14 @@ export default function Index() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // ✅ Save user in async storage or context later
         Alert.alert("Success", "Login successful!");
-        router.replace("/home/home"); // navigate to home
+        
+        // ✅ Save the user data globally
+        await login(data.user);
+
+        // ✅ Navigate without passing any parameters
+        router.replace("/home/home"); 
+
       } else {
         Alert.alert("Login Failed", data.message || "Invalid email or password.");
       }
@@ -63,7 +69,8 @@ export default function Index() {
         />
 
         <Button title="Log In" onPress={handleLogin} />
-      </View>
+      </View> 
+      {/* ✅ FIX: Added the missing '>' to the closing View tag */}
     </ImageBackground>
   );
 }

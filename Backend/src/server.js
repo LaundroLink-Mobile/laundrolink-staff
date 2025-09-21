@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 // Routes
 import userRoutes from "./routes/users.js";
 import orderRoutes from "./routes/orders.js";
+import messagesRouter from './routes/messages.js';
 
 dotenv.config();
 
@@ -17,11 +18,19 @@ app.use(express.json());
 // ✅ API Routes
 app.use("/api/users", userRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/messages", messagesRouter);
 
 // ✅ Health check route (for quick testing in browser)
 app.get("/", (req, res) => {
   res.send("🚀 Backend API is running...");
 });
 
+const hostArg = process.argv.find(arg => arg.startsWith('--host'));
+const host = hostArg ? hostArg.split('=')[1] : 'localhost';
+
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
+
+// Use the host variable in app.listen
+app.listen(PORT, host, () => {
+  console.log(`🚀 Backend running on http://${host}:${PORT}`);
+});

@@ -17,17 +17,29 @@ router.post("/login", async (req, res) => {
 
   try {
     const [rows] = await db.query(
-      "SELECT UserID, UserEmail, UserRole FROM User WHERE UserEmail = ? AND UserPassword = ?",
+      `
+      SELECT 
+        u.UserID, 
+        u.UserEmail, 
+        u.UserRole, 
+        s.ShopID 
+      FROM 
+        User u 
+      JOIN 
+        Staff s ON u.UserID = s.StaffID 
+      WHERE 
+        u.UserRole = 'Staff' AND u.UserEmail = ? AND u.UserPassword = ?
+      `,
       [email, password]
     );
 
     if (rows.length === 0) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid credentials or not a staff account" });
     }
 
     res.json({
       success: true,
-      user: rows[0],
+      user: rows[0], // The user object will now include the ShopID
     });
   } catch (error) {
     console.error("Login error:", error);
