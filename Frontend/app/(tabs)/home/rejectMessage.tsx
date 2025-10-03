@@ -1,6 +1,6 @@
 // rejectMessage.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { updateOrderStatus } from "@/lib/orders";
 import Header from "@/components/Header";
@@ -12,27 +12,23 @@ export default function RejectOrderScreen() {
   const router = useRouter();
 
   const handleSubmit = async () => {
-    if (!reason) {
+    if (!reason.trim()) {
       Alert.alert("Error", "Please provide a reason for rejection.");
       return;
     }
 
-    // This call now correctly sends all the data to the backend
     const success = await updateOrderStatus(orderId, "Rejected", reason, note);
 
     if (success) {
-      // Navigate back to the main dashboard after rejecting
-      // The home screen will refresh automatically with useFocusEffect
       router.replace({
         pathname: "/home/home",
-        params: { shopId: shopId },
-      }); 
+        params: { shopId },
+      });
     } else {
       Alert.alert("Error", "Failed to reject order.");
     }
   };
 
-  // ✅ This function now simply goes back to the previous screen
   const handleCancel = () => {
     router.back();
   };
@@ -40,12 +36,19 @@ export default function RejectOrderScreen() {
   return (
     <View style={styles.container}>
       <Header title="Reject Order" />
-      <View style={styles.card}>
-        <Text style={styles.title}>Reject Order</Text>
-        <Text style={styles.orderId}>Order #{orderId}</Text>
-        <Text style={styles.customer}>{customer}</Text>
 
-        <Text style={styles.label}>Reason:</Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* 🔴 Warning Banner */}
+        <View style={styles.warningBox}>
+          <Text style={styles.warningText}>
+            ⚠️ Rejecting this order cannot be undone. Please provide a valid reason.
+          </Text>
+        </View>
+
+        <Text style={styles.orderId}>Order #{orderId}</Text>
+        <Text style={styles.customer}>Customer: {customer}</Text>
+
+        <Text style={styles.label}>Reason*</Text>
         <TextInput
           value={reason}
           onChangeText={setReason}
@@ -53,41 +56,67 @@ export default function RejectOrderScreen() {
           style={styles.input}
         />
 
-        <Text style={styles.label}>Note (optional):</Text>
+        <Text style={styles.label}>Additional Note (optional)</Text>
         <TextInput
           value={note}
           onChangeText={setNote}
           placeholder="Add details..."
           multiline
-          style={[styles.input, { height: 80 }]}
+          style={[styles.input, styles.textArea]}
         />
 
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: "#c82333" }]} // Changed to red
+          style={[styles.button, styles.rejectButton]}
           onPress={handleSubmit}
         >
-          <Text style={styles.buttonText}>Submit Rejection</Text>
+          <Text style={styles.buttonText}>Reject Order</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: "gray" }]}
+          style={[styles.button, styles.cancelButton]}
           onPress={handleCancel}
         >
-          <Text style={styles.buttonText}>Cancel</Text>
+          <Text style={[styles.buttonText, { color: "#333" }]}>Cancel</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9f9f9" },
-  card: { margin: 20, marginTop: 20, padding: 20, backgroundColor: "#fff", borderRadius: 10, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 5, elevation: 3 },
-  title: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  orderId: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
-  customer: { fontSize: 16, color: '#555', marginBottom: 20 },
-  label: { fontWeight: "600", marginTop: 15, marginBottom: 5 },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, marginTop: 5, backgroundColor: "#fff", textAlignVertical: 'top' },
-  button: { marginTop: 15, padding: 15, borderRadius: 8, alignItems: "center" },
-  buttonText: { color: "#fff", fontWeight: "bold" },
+  container: { flex: 1, backgroundColor: "#f4f6f9" },
+  content: { padding: 20, flexGrow: 1 },
+
+  warningBox: {
+    backgroundColor: "#ffe5e5",
+    padding: 12,
+    marginBottom: 20,
+    borderRadius: 8,
+    borderLeftWidth: 5,
+    borderLeftColor: "#d9534f",
+  },
+  warningText: { color: "#b52b27", fontSize: 14, fontWeight: "500" },
+
+  orderId: { fontSize: 22, fontWeight: "bold", marginBottom: 5 },
+  customer: { fontSize: 15, fontWeight: "600", marginBottom: 20 },
+
+  label: { fontWeight: "600", marginTop: 15, marginBottom: 6, color: "#333" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "#fff",
+  },
+  textArea: { height: 90, textAlignVertical: "top" },
+
+  button: {
+    marginTop: 20,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  rejectButton: { backgroundColor: "#d9534f" },
+  cancelButton: { backgroundColor: "#e5e5e5" },
+  buttonText: { fontWeight: "bold", color: "#fff", fontSize: 16 },
 });

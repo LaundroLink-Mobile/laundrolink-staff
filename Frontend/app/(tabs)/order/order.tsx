@@ -6,7 +6,7 @@ import { LineChart } from "react-native-chart-kit";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Header from "@/components/Header";
 import { fetchOrderSummary, OrderSummaryData } from "@/lib/orders";
-import { getCurrentUser } from "@/lib/auth"; // ✅ Import the function to get the current user
+import { getCurrentUser } from "@/lib/auth"; 
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -16,7 +16,6 @@ const defaultChartData = {
 };
 
 export default function OrderScreen() {
-  // ✅ Get the logged-in user's data directly
   const user = getCurrentUser();
   const shopId = user?.ShopID;
 
@@ -24,11 +23,19 @@ export default function OrderScreen() {
   const [selectedRange, setSelectedRange] = useState("This Week");
   const [summary, setSummary] = useState<OrderSummaryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentDateDisplay, setCurrentDateDisplay] = useState("");
 
   const options = ["Today", "This Week", "This Month"];
+  
+  useEffect(() => {
+    // This effect runs once to format and set the current date string.
+    const date = new Date();
+    const formattedDate = date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    setCurrentDateDisplay(formattedDate);
+  }, []);
+
 
   const loadSummary = useCallback(async () => {
-    // ✅ This logic now uses the shopId from the user object
     if (shopId) {
       setLoading(true);
       const data = await fetchOrderSummary(shopId, selectedRange);
@@ -64,7 +71,10 @@ export default function OrderScreen() {
       <Header title="Orders" />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.dateRow}>
-          <Text style={styles.sectionTitle}>Date</Text>
+          <View style={styles.dateTitleContainer}>
+            <Text style={styles.sectionTitle}>Date: </Text>
+            <Text style={styles.dateText}>{currentDateDisplay}</Text>
+          </View>
           <View style={{ position: "relative" }}>
             <TouchableOpacity style={styles.dropdownBtn} onPress={() => setMenuVisible(!menuVisible)}>
               <View style={styles.dropdownContent}>
@@ -92,7 +102,7 @@ export default function OrderScreen() {
             <StatusCard icon="checkmark-circle-outline" label="Completed" count={summary?.completedOrders ?? 0} color="#28a745" />
           </View>
           <View style={styles.statusCardWrapper}>
-            <StatusCard icon="time-outline" label="Pending" count={summary?.pendingOrders ?? 0} color="#ffc107" />
+            <StatusCard icon="time-outline" label="In Progress" count={summary?.pendingOrders ?? 0} color="#ffc107" />
           </View>
           <View style={styles.statusCardWrapper}>
             <StatusCard icon="bar-chart-outline" label="Revenue" count={summary?.totalRevenue ?? 0} color="#17a2b8" />
@@ -137,7 +147,7 @@ export default function OrderScreen() {
             <View key={order.id} style={[styles.tableRow, index % 2 === 0 ? styles.rowEven : styles.rowOdd]}>
               <Text style={styles.tableCell}>{order.id}</Text>
               <Text style={styles.tableCell}>{order.customer}</Text>
-              <Text style={[styles.tableCell, { color: order.status === "Completed" ? "green" : order.status === "Pending" ? "orange" : "red" }]}>
+              <Text style={[styles.tableCell, { color: order.status === "Completed" ? "green" : order.status === "Pending" || order.status === "In Progress" ? "orange" : "red" }]}>
                 {order.status}
               </Text>
               <Text style={styles.tableCell}>₱{order.amount?.toFixed(2) ?? 'N/A'}</Text>
@@ -162,6 +172,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f9fafb" },
   content: { padding: 16 },
   dateRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 5, zIndex: 10 },
+  dateTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  dateText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#555',
+    marginBottom: 10,
+  },
   sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10 },
   dropdownBtn: { backgroundColor: "#e6f7ff", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 },
   dropdownContent: { flexDirection: "row", alignItems: "center", justifyContent: "center" },

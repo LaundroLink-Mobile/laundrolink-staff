@@ -22,11 +22,14 @@ router.post("/login", async (req, res) => {
         u.UserID, 
         u.UserEmail, 
         u.UserRole, 
-        s.ShopID 
+        s.ShopID,
+        sh.ShopName 
       FROM 
         User u 
       JOIN 
-        Staff s ON u.UserID = s.StaffID 
+        Staff s ON u.UserID = s.StaffID
+      JOIN
+        Laundry_Shop sh ON s.ShopID = sh.ShopID
       WHERE 
         u.UserRole = 'Staff' AND u.UserEmail = ? AND u.UserPassword = ?
       `,

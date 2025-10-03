@@ -20,9 +20,15 @@ export default function MessageScreen() {
       const loadConversations = async () => {
         if (userId) {
           setLoading(true);
-          const data = await fetchConversations(userId);
-          setConversations(data);
-          setLoading(false);
+          try {
+            const data = await fetchConversations(userId);
+            setConversations(data);
+          } catch (error) {
+            console.error("Failed to fetch conversations:", error);
+            // Optionally set an error state here
+          } finally {
+            setLoading(false);
+          }
         }
       };
       loadConversations();
@@ -30,108 +36,201 @@ export default function MessageScreen() {
   );
 
   const handleOpenChat = (convo: ConversationPreview) => {
-    // ✅ Pass the conversationId to the chat screen for a faster lookup
     router.push({
       pathname: "/message/chat",
       params: {
         conversationId: convo.conversationId,
         partnerName: convo.name,
-        partnerId: convo.partnerId, // Keep this for reference if needed
+        partnerId: convo.partnerId,
       },
     });
   };
+  
+  // Helper to get initials from a name
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  };
 
+  const renderContent = () => {
+    if (loading) {
+      return <ActivityIndicator size="large" color="#007bff" style={{ marginTop: 50 }} />;
+    }
+
+    if (conversations.length === 0) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <Ionicons name="chatbubbles-outline" size={60} color="#ccc" />
+          <Text style={styles.emptyStateTitle}>No Messages Yet</Text>
+          <Text style={styles.emptyStateSubtitle}>
+            Start a conversation and it will appear here.
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView contentContainerStyle={styles.content}>
+        {conversations.map((convo) => (
+          <TouchableOpacity
+            key={convo.conversationId}
+            style={styles.card}
+            onPress={() => handleOpenChat(convo)}
+          >
+            {/* Avatar with Initials */}
+            <View style={styles.avatar}>
+              <Text style={styles.initials}>{getInitials(convo.name)}</Text>
+            </View>
+
+            {/* Message Content */}
+            <View style={styles.cardContent}>
+              <Text style={styles.name}>{convo.name}</Text>
+              <Text
+                style={[styles.message, convo.unreadCount > 0 && styles.unreadMessage]}
+                numberOfLines={1}
+              >
+                {convo.lastMessage && convo.lastMessage.trim() !== ""
+                  ? convo.lastMessage
+                  : convo.lastMessageImage
+                  ? "📷 Photo"
+                  : "No messages yet"}
+              </Text>
+            </View>
+
+            {/* Time and Unread Badge */}
+            <View style={styles.cardRight}>
+              <Text style={[styles.time, convo.unreadCount > 0 && styles.unreadTime]}>
+                {new Date(convo.time).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Text>
+              {convo.unreadCount > 0 && (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadCountText}>{convo.unreadCount}</Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    );
+  };
+  
   return (
     <View style={styles.container}>
       <Header title="Messages" />
-      {loading ? (
-        <ActivityIndicator size="large" color="#007bff" style={{ marginTop: 20 }} />
-      ) : (
-        <ScrollView contentContainerStyle={styles.content}>
-          {conversations.map((convo) => (
-            // ✅ Use conversationId as the key
-            <TouchableOpacity key={convo.conversationId} style={styles.card} onPress={() => handleOpenChat(convo)}>
-              <Ionicons name="person-circle-outline" size={40} color="#555" />
-              <View style={styles.cardContent}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.name}>{convo.name}</Text>
-                  <View style={styles.rightSection}>
-                    <Text style={[styles.time, convo.unreadCount > 0 && styles.unreadTime]}>
-                      {new Date(convo.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                    {convo.unreadCount > 0 && <View style={styles.unreadDot} />}
-                  </View>
-                </View>
-                <Text style={[styles.message, convo.unreadCount > 0 && styles.unreadMessage]} numberOfLines={1}>
-                  {convo.lastMessage}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+      {renderContent()}
     </View>
   );
 }
 
+
+// --- New Styles for a Modern Look ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#fff", // A clean white background
   },
   content: {
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   card: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
+    borderRadius: 12,
     padding: 12,
-    marginBottom: 12,
+    marginBottom: 16,
     alignItems: "center",
-    height: 80,
+    // Modern shadow for depth
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#e1f5fe", // A soft, pleasing blue
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  initials: {
+    color: "#0277bd", // A darker, more readable blue
+    fontSize: 18,
+    fontWeight: "bold",
   },
   cardContent: {
     flex: 1,
-    marginLeft: 10,
     justifyContent: "center",
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
   },
   name: {
     fontWeight: "600",
-    fontSize: 15,
+    fontSize: 16,
+    color: "#111", // Darker text for better contrast
+  },
+  message: {
+    fontSize: 14,
+    color: "#666", // Grey for secondary text
+    marginTop: 4,
+  },
+  cardRight: {
+    alignItems: "flex-end",
+    marginLeft: 10,
+    gap: 8,
   },
   time: {
     fontSize: 12,
-    color: "#666",
+    color: "#999",
   },
-  message: {
-    fontSize: 13,
-    color: "#555",
-    marginTop: 4,
-  },
-  rightSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
+  // --- Unread State Styles ---
   unreadMessage: {
     fontWeight: "bold",
-    color: "#000",
+    color: "#333", // Make unread messages darker
   },
   unreadTime: {
     fontWeight: "bold",
-    color: "#000",
+    color: "#007bff", // Use a brand color for unread time
   },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#1e90ff",
+  unreadBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#007bff", // A vibrant blue for the badge
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  unreadCountText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  // --- Empty State Styles ---
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#333",
+    marginTop: 16,
+  },
+  emptyStateSubtitle: {
+    fontSize: 15,
+    color: "#888",
+    marginTop: 8,
+    textAlign: "center",
   },
 });

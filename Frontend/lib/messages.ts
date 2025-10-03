@@ -6,7 +6,8 @@ export interface ConversationPreview {
   partnerId: string;
   name: string;
   time: string;
-  lastMessage: string;
+  lastMessage: string | null;
+  lastMessageImage?: string | null;
   unreadCount: number;
 }
 
@@ -52,14 +53,19 @@ export const fetchConversationHistory = async (conversationId: string): Promise<
 };
 
 /**
- * Sends a new message and updates the conversation.
+ * Sends a new message (text or image) and updates the conversation.
  */
-export const sendMessage = async (senderId: string, receiverId: string, messageText: string): Promise<ChatMessage | null> => {
+export const sendMessage = async (
+  senderId: string,
+  receiverId: string,
+  text?: string,
+  image?: string
+): Promise<ChatMessage | null> => {
   try {
     const response = await fetch(`${API_URL}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ senderId, receiverId, messageText }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ senderId, receiverId, text, image }),
     });
     if (!response.ok) throw new Error("Failed to send message");
     return await response.json();
@@ -68,6 +74,7 @@ export const sendMessage = async (senderId: string, receiverId: string, messageT
     return null;
   }
 };
+
 
 /**
  * Marks all messages in a conversation as read for a given user.

@@ -4,8 +4,8 @@ import db from "../db.js";
 const router = express.Router();
 
 /**
- * ✅ [NEW & EFFICIENT] Fetch conversation list for a user.
- * This query is much faster as it primarily uses the small Conversation table.
+ * ✅ [UPDATED] Fetch conversation list for a user.
+ * Shows "📷 Photo" if the last message was an image.
  */
 router.get("/conversations/:userId", async (req, res) => {
   const { userId } = req.params;
@@ -18,10 +18,15 @@ router.get("/conversations/:userId", async (req, res) => {
         IF(c.Participant1_ID = ?, c.Participant2_ID, c.Participant1_ID) AS partnerId,
         -- Get the other participant's name
         u.CustName AS name,
-        -- Get the last message text using a subquery
+        -- Get the last message text or image
         (
-          SELECT m.MessageText 
-          FROM Message m 
+          SELECT 
+            CASE 
+              WHEN m.MessageText IS NOT NULL AND m.MessageText != '' THEN m.MessageText
+              WHEN m.MessageImage IS NOT NULL AND m.MessageImage != '' THEN '📷 Photo'
+              ELSE ''
+            END
+          FROM Message m
           WHERE m.ConversationID = c.ConversationID 
           ORDER BY m.CreatedAt DESC 
           LIMIT 1
@@ -30,14 +35,17 @@ router.get("/conversations/:userId", async (req, res) => {
         (
           SELECT COUNT(*) 
           FROM Message m 
-          WHERE m.ConversationID = c.ConversationID AND m.ReceiverID = ? AND m.MessageStatus = 'Delivered'
+          WHERE m.ConversationID = c.ConversationID 
+            AND m.ReceiverID = ? 
+            AND m.MessageStatus = 'Delivered'
         ) AS unreadCount
       FROM Conversation c
-      -- Join to get the name of the OTHER user in the conversation
-      JOIN Customer u ON u.CustID = IF(c.Participant1_ID = ?, c.Participant2_ID, c.Participant1_ID)
+      JOIN Customer u 
+        ON u.CustID = IF(c.Participant1_ID = ?, c.Participant2_ID, c.Participant1_ID)
       WHERE c.Participant1_ID = ? OR c.Participant2_ID = ?
       ORDER BY c.UpdatedAt DESC;
     `;
+
     const [conversations] = await db.query(query, [userId, userId, userId, userId, userId]);
     res.json(conversations);
   } catch (error) {
@@ -45,6 +53,7 @@ router.get("/conversations/:userId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch conversations" });
   }
 });
+
 
 
 /**
@@ -77,13 +86,9 @@ router.get("/history/:conversationId", async (req, res) => {
 });
 
 
-/**
- * ✅ [NEW & EFFICIENT] Send a new message.
- * This logic finds or creates a conversation, then adds the message.
- */
 router.post("/", async (req, res) => {
-  const { senderId, receiverId, messageText } = req.body;
-  if (!senderId || !receiverId || !messageText) {
+  const { senderId, receiverId, text, image } = req.body;
+  if (!senderId || !receiverId || (!text && !image)) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -112,8 +117,10 @@ router.post("/", async (req, res) => {
     // Step 2: Insert the new message
     const newMessageId = `MSG${Date.now().toString().slice(-7)}`;
     await db.query(
-      "INSERT INTO Message (MessageID, ConversationID, SenderID, ReceiverID, MessageText, CreatedAt, MessageStatus) VALUES (?, ?, ?, ?, ?, NOW(), 'Sent')",
-      [newMessageId, conversationId, senderId, receiverId, messageText]
+      `INSERT INTO Message 
+        (MessageID, ConversationID, SenderID, ReceiverID, MessageText, MessageImage, CreatedAt, MessageStatus) 
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), 'Sent')`,
+      [newMessageId, conversationId, senderId, receiverId, text || null, image || null]
     );
 
     // Step 3: Update the conversation's timestamp
@@ -131,6 +138,7 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "Failed to send message" });
   }
 });
+
 
 /**
  * ✅ [NEW] Mark messages in a conversation as read.

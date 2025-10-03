@@ -6,6 +6,7 @@ interface UserSession {
   UserEmail: string;
   UserRole: string;
   ShopID: string;
+  ShopName: string;
 }
 
 // This will hold the user data in memory while the app is running
